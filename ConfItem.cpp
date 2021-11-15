@@ -4,7 +4,6 @@
 
 #include <string>
 #include <list>
-#include <iterator>
 #include <regex>
 
 #include "ConfItem.h"
@@ -17,56 +16,60 @@ namespace LibvirtConf {
      * @return: the configuration item type find.
      * ITEM_NONE for no valid configuration found.
      */
-    ItemType ConfItem::parse(std::list<std::string>& confStrings) {
-        const std::string WHITESPACE = " \n\r\t\f\v";
+    ItemType ConfItem::parse(std::list<std::string> &confStrings) {
         std::string content;
         bool typeStringList = false;
         bool typeInt = false;
         ItemType retType = ItemType::ITEM_NONE;
 
-        std::smatch match;
         // In item.name there is no '-'
-        std::regex regItemIntValue(R"((\w+)\s*=\s*(\d+))");
-        std::regex regItemStringValue( R"((\w+)\s*=\s*\"(.*)\")");
-        std::regex regItemStringListValue(R"((\w+)\s*=\s*\[(.*)\])");
+        //std::regex regItemIntValue(R"((\w+)\s*=\s*(\d+))");
+        std::regex regItemIntValue("(\\w+)\\s*=\\s*(\\d+)");
+        //std::regex regItemStringValue(R"((\w+)\s*=\s*\"(.*)\")");
+        std::regex regItemStringValue("(\\w+)\\s*=\\s*\"(.*)\"");
+        //std::regex regItemStringListValue(R"((\w+)\s*=\s*\[(.*)\])");
+        std::regex regItemStringListValue("(\\w+)\\s*=\\s*\\[(.*)\\]");
+        //std::regex regDevString(R"(\"(.*)\")");
+        std::regex regDevString("\"([^\"]*)\"");
 
-        if (confStrings.empty)
+        std::smatch got;
+        if (confStrings.empty())
             return retType;
 
         content = stringListJoin_(confStrings);
         if (content.empty() ||
-            (posEqualSign = content.find("=")) == std::string::npos)
+            (content.find("=")) == std::string::npos)
             return retType;
 
-        if (content.find("[") == std::string::npos)
+        if (content.find("[") != std::string::npos)
             typeStringList = true;
-        if (content.find("\"") != std::string::npos)
+        if (content.find("\"") == std::string::npos)
+            // No '"' found, should be a Int type configuration
             typeInt = true;
 
-        if (typeStringList){
-            if (std::regex_search(content, match, regItemStringListValue)) {
-                auto strValue = match[1];
+        if (typeStringList) {
+            if (std::regex_search(content, got, regItemStringListValue)) {
+                auto strValue = got[2].str();
+                value_.strList = new std::list<std::string>;
                 std::smatch m;
-                std::list<std::string> strList;
-                while (std::regex_search(strValue, m, R"(\"(.*)\")")) {
-                    strList.push_back(m[0]);
+                while (std::regex_search(strValue, m, regDevString)) {
+                    value_.strList->push_back(*new std::string(m[1].str()));
                     strValue = m.suffix();
                 }
-                name_ = match[0];
-                value_.strList = strList;
+                name_ = new std::string(got[1].str());
                 retType = ItemType::ITEM_STRING_LIST;
             }
         } else if (typeInt) {
-            if (std::regex_search(content, match, regItemIntValue)) {
+            if (std::regex_search(content, got, regItemIntValue)) {
                 // TODO: What about if raised an exception?
-                name_ = match[0];
-                value_.i = std::stoi(match[1]);
+                name_ = new std::string(got[1].str());
+                value_.i = std::stoi(got[2].str());
                 retType = ItemType::ITEM_INT;
             }
         } else {
-            if (std::regex_search(content, match, regItemStringValue)) {
-                name_ = match[0];
-                value_.s = match[1];
+            if (std::regex_search(content, got, regItemStringValue)) {
+                name_ = new std::string(got[1].str());
+                value_.s = new std::string(got[2].str());
                 retType = ItemType::ITEM_STRING;
             }
         }
@@ -74,15 +77,21 @@ namespace LibvirtConf {
         return retType;
     }
 
-    std::string ConfItem::stringListJoin_(std::list<std::string>& confStrings) {
+    std::string ConfItem::stringListJoin_(std::list<std::string> &confStrings) {
         std::string content;
+        const std::string WHITESPACE = " \n\r\t\f\v";
 
-        for (std::list<std::string::const_iterator s = confStrings.begin();
+        // Error: std::list<std::string::iterator> s = confStrings.begin();
+        // OK for: autos s = confStrings.begin();
+        for (std::list<std::string>::const_iterator s = confStrings.begin();
              s != confStrings.end(); ++s) {
-            auto posStart= s->find_first_not_of(WHITESPACE);
+            auto bNotLast = std::next(s) != confStrings.end();
+            auto posStart = s->find_first_not_of(WHITESPACE);
             auto posEnd = s->find_last_not_of(WHITESPACE);
             if (posStart != std::string::npos && posEnd != std::string::npos) {
-                content += subs->substr(posStart, posEnd);
+                content += s->substr(posStart, posEnd + 1 - posStart);
+                if (bNotLast && not content.empty())
+                    content += " ";
             }
         }
         // Returning a local variable will not have problem, return a reference of local

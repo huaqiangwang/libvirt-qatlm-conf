@@ -21,8 +21,8 @@ namespace LibvirtConf {
 
     union ItemValue {
         std::int64_t i;
-        std::string s;
-        std::list<std::string> strList;
+        std::string *s;
+        std::list<std::string> *strList;
     };
 
 /**
@@ -36,12 +36,13 @@ namespace LibvirtConf {
     class ConfItem {
     public:
         ItemType parse(std::list<std::string> &);
-        std::string &name() { return name_ };
-        ItemValue &value() { return value_ };
+        std::string* name() { return name_; };
+        ItemValue &value() { return value_; };
 
-    private:
+    protected:
         std::string stringListJoin_(std::list<std::string>&);
-        std::string name_;
+    private:
+        std::string *name_;
         ItemType type_;
         ItemValue value_;
     };
