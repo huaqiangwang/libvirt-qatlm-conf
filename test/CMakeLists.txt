@@ -16,7 +16,9 @@ link_directories(
 
 
 add_executable(virtconf_test testConfItem.cpp
-		../ConfItem.cpp)
+		testLibvirtConf.cpp
+		../ConfItem.cpp
+		../LibvirtConf.cpp)
 
 TARGET_LINK_LIBRARIES(virtconf_test
 	gtest

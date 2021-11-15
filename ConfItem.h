@@ -23,6 +23,12 @@ namespace LibvirtConf {
         std::int64_t i;
         std::string *s;
         std::list<std::string> *strList;
+        ItemValue()=default;
+        ItemValue(std::int64_t vi , std::string* vs, std::list<std::string> *vlist) {
+            i = vi;
+            s = vs;
+            strList = vlist;
+        };
     };
 
 /**
@@ -35,9 +41,17 @@ namespace LibvirtConf {
  */
     class ConfItem {
     public:
+        ConfItem(std::string n, ItemType t, ItemValue v) {
+            name_ = new std::string(n);
+            type_ = t;
+            value_ = v;
+        }
+        bool operator == (const ConfItem& ) const;
+        ConfItem() = default;
         ItemType parse(std::list<std::string> &);
-        std::string* name() { return name_; };
-        ItemValue &value() { return value_; };
+        std::string* name() { return name_; }
+        ItemValue &value() { return value_; }
+        ItemType &type() {return type_;}
 
     protected:
         std::string stringListJoin_(std::list<std::string>&);

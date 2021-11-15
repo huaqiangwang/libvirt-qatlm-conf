@@ -58,6 +58,7 @@ namespace LibvirtConf {
                 }
                 name_ = new std::string(got[1].str());
                 retType = ItemType::ITEM_STRING_LIST;
+                type_ = retType;
             }
         } else if (typeInt) {
             if (std::regex_search(content, got, regItemIntValue)) {
@@ -65,12 +66,14 @@ namespace LibvirtConf {
                 name_ = new std::string(got[1].str());
                 value_.i = std::stoi(got[2].str());
                 retType = ItemType::ITEM_INT;
+                type_ = retType;
             }
         } else {
             if (std::regex_search(content, got, regItemStringValue)) {
                 name_ = new std::string(got[1].str());
                 value_.s = new std::string(got[2].str());
                 retType = ItemType::ITEM_STRING;
+                type_ = retType;
             }
         }
 
@@ -97,5 +100,32 @@ namespace LibvirtConf {
         // Returning a local variable will not have problem, return a reference of local
         // variable might have problem.
         return content;
+    }
+
+    bool ConfItem::operator == (const ConfItem& one) const{
+        if (one.name_ != name_)
+            return false;
+
+        if (one.type_ != type_)
+            return false;
+
+        switch(type_) {
+            case ItemType::ITEM_INT:
+                if (one.value_.i == value_.i)
+                    return true;
+                    break;
+            case ItemType::ITEM_STRING:
+                if (one.value_.s == value_.s)
+                    return true;
+                break;
+            case ItemType::ITEM_STRING_LIST:
+                if (one.value_.strList == value_.strList)
+                    return true;
+                break;
+            case ItemType ::ITEM_NONE:
+                return true;
+        }
+        return false;
+
     }
 }

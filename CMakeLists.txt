@@ -4,7 +4,7 @@ project(libvirt_qatlm_conf)
 set(CMAKE_CXX_STANDARD 14)
 set(TEST_NAME, "virtconftest")
 
-add_executable(libvirt_qatlm_conf main.cpp)
+add_executable(libvirt_qatlm_conf main.cpp ConfItem.cpp LibvirtConf.cpp)
 
 enable_testing()
 add_subdirectory(test)
