@@ -29,3 +29,14 @@ or
 >
 > libvirt-qat-conf
 > 
+
+## Compile and Run the test
+
+```shell
+cd <root>
+mkdir build && cd build
+cmake ..
+make -j10
+ctest 
+#(or make test)
+```
