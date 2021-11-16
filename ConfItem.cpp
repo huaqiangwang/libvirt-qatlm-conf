@@ -3,20 +3,66 @@
 //
 
 #include <string>
-#include <list>
+#include <vector>
+#include <cinttypes>
 #include <regex>
 
 #include "ConfItem.h"
 
 
 namespace LibvirtConf {
+    std::vector<std::string> ConfItem::toStrings() {
+        std::vector<std::string> retStrings;
+        auto buf = std::make_unique<char[]>(256);
+        int pos = 0;
+
+        switch(type_) {
+            case ItemType::ITEM_INT:
+                std::snprintf(buf.get(), 256, "%s = %" PRId64, name_.c_str(), value_.GetInt());
+                retStrings.push_back(buf.get());
+                break;
+            case ItemType::ITEM_STRING:
+                std::snprintf(buf.get(), 256, "%s = \"%s\"", name_.c_str(), value_.GetStr().c_str());
+                retStrings.push_back(buf.get());
+                break;
+            case ItemType::ITEM_STRING_LIST:
+                std::snprintf(buf.get(), 256, "%s = [", name_.c_str());
+                retStrings.push_back(buf.get());
+                for (auto item: value_.GetStrList()) {
+                    // output line with a length less than 80 chars
+                    // 2 is size for two extra \" sign
+                    if (pos + item.size() + 2 > 80) {
+                        // tune " " char to a string ending char
+                        buf[--pos] = 0;
+                        retStrings.push_back(buf.get());
+                        pos = 0;
+                    }
+                    buf[pos++]='\"';
+                    std::memcpy(&buf[pos], item.c_str(), item.size());
+                    pos += item.size();
+                    buf[pos++]='\"';
+                    buf[pos++] = ',';
+                    buf[pos++] = ' ';
+                }
+                if (pos) {
+                    // ending with ', '. end the string with '\0'
+                    buf[pos-2] = 0;
+                    retStrings.push_back(buf.get());
+                }
+                retStrings.push_back("]");
+                break;
+        }
+        return retStrings;
+    }
+
+
     /**
      * Get the configuration item name and value from strings.
      * @param confStrings: stripped strings
      * @return: the configuration item type find.
      * ITEM_NONE for no valid configuration found.
      */
-    ItemType ConfItem::parse(std::list<std::string> &confStrings) {
+    ItemType ConfItem::parse(std::vector<std::string> &confStrings) {
         std::string content;
         bool typeStringList = false;
         bool typeInt = false;
@@ -50,28 +96,30 @@ namespace LibvirtConf {
         if (typeStringList) {
             if (std::regex_search(content, got, regItemStringListValue)) {
                 auto strValue = got[2].str();
-                value_.strList = new std::list<std::string>;
+                std::vector<std::string> *strList = new std::vector<std::string>;
                 std::smatch m;
                 while (std::regex_search(strValue, m, regDevString)) {
-                    value_.strList->push_back(*new std::string(m[1].str()));
+                    strList->push_back(*new std::string(m[1].str()));
                     strValue = m.suffix();
                 }
-                name_ = new std::string(got[1].str());
+                value_.Set(*strList);
+                name_ = std::string(got[1].str());
                 retType = ItemType::ITEM_STRING_LIST;
                 type_ = retType;
             }
         } else if (typeInt) {
             if (std::regex_search(content, got, regItemIntValue)) {
                 // TODO: What about if raised an exception?
-                name_ = new std::string(got[1].str());
-                value_.i = std::stoi(got[2].str());
+                name_ = std::string(got[1].str());
+                value_.Set(std::stoi(got[2].str()));
                 retType = ItemType::ITEM_INT;
                 type_ = retType;
             }
         } else {
             if (std::regex_search(content, got, regItemStringValue)) {
-                name_ = new std::string(got[1].str());
-                value_.s = new std::string(got[2].str());
+                name_ = std::string(got[1].str());
+                auto s = std::string(got[2].str());
+                value_.Set(s);
                 retType = ItemType::ITEM_STRING;
                 type_ = retType;
             }
@@ -80,13 +128,13 @@ namespace LibvirtConf {
         return retType;
     }
 
-    std::string ConfItem::stringListJoin_(std::list<std::string> &confStrings) {
+    std::string ConfItem::stringListJoin_(std::vector<std::string> &confStrings) {
         std::string content;
         const std::string WHITESPACE = " \n\r\t\f\v";
 
-        // Error: std::list<std::string::iterator> s = confStrings.begin();
+        // Error: std::vector<std::string::iterator> s = confStrings.begin();
         // OK for: autos s = confStrings.begin();
-        for (std::list<std::string>::const_iterator s = confStrings.begin();
+        for (std::vector<std::string>::const_iterator s = confStrings.begin();
              s != confStrings.end(); ++s) {
             auto bNotLast = std::next(s) != confStrings.end();
             auto posStart = s->find_first_not_of(WHITESPACE);
@@ -102,7 +150,7 @@ namespace LibvirtConf {
         return content;
     }
 
-    bool ConfItem::operator == (const ConfItem& one) const{
+    bool ConfItem::operator == (ConfItem one) const{
         if (one.name_ != name_)
             return false;
 
@@ -111,15 +159,15 @@ namespace LibvirtConf {
 
         switch(type_) {
             case ItemType::ITEM_INT:
-                if (one.value_.i == value_.i)
+                if (one.GetValueInt() == GetValueInt())
                     return true;
                     break;
             case ItemType::ITEM_STRING:
-                if (one.value_.s == value_.s)
+                if (one.GetValueStr() == GetValueStr())
                     return true;
                 break;
             case ItemType::ITEM_STRING_LIST:
-                if (one.value_.strList == value_.strList)
+                if (one.GetValueStrList() == GetValueStrList())
                     return true;
                 break;
             case ItemType ::ITEM_NONE:
@@ -127,5 +175,11 @@ namespace LibvirtConf {
         }
         return false;
 
+    }
+
+    ConfItem::ConfItem(const ConfItem& confItem) {
+        name_ = confItem.name();
+        type_ = confItem.type_;
+        value_ = confItem.value_;
     }
 }

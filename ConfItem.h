@@ -6,7 +6,7 @@
 #define LIBVIRT_QATLM_CONF_CONFITEM_H
 
 #include <string>
-#include <list>
+#include <vector>
 
 namespace LibvirtConf {
 /**
@@ -19,17 +19,44 @@ namespace LibvirtConf {
         ITEM_STRING_LIST
     };
 
-    union ItemValue {
-        std::int64_t i;
-        std::string *s;
-        std::list<std::string> *strList;
-        ItemValue()=default;
-        ItemValue(std::int64_t vi , std::string* vs, std::list<std::string> *vlist) {
-            i = vi;
-            s = vs;
-            strList = vlist;
-        };
+    class ItemValue {
+    private:
+        std::int64_t i_;
+        std::string s_;
+        std::vector<std::string> strList_;
+    public:
+        int64_t & GetInt() const {
+            return const_cast<int64_t &>(i_);
+        }
+        std::string & GetStr() const {
+            return const_cast<std::string &>(s_);
+        }
+        std::vector<std::string> & GetStrList() const {
+            return const_cast<std::vector<std::string> &>(strList_);
+        }
+
+        void Set(std::int64_t i) {
+            i_ = i;
+        }
+        void Set(std::string& s) {
+            s_ = s;
+        }
+        void Set(std::vector<std::string>& strList) {
+            strList_ = strList;
+        }
+        ItemValue(std::int64_t vi, std::string s, std::vector<std::string> strList){
+            i_ = vi;
+            s_ = s;
+            strList_ = strList;
+        }
+        ItemValue(const ItemValue& obj) {
+            i_ = obj.GetInt();
+            s_ = obj.GetStr();
+            strList_ = obj.GetStrList();
+        }
+        ItemValue(): i_(0){};
     };
+
 
 /**
  * Represents one libvirt style configuration Item.
@@ -42,21 +69,32 @@ namespace LibvirtConf {
     class ConfItem {
     public:
         ConfItem(std::string n, ItemType t, ItemValue v) {
-            name_ = new std::string(n);
+            name_ = n;
             type_ = t;
             value_ = v;
         }
-        bool operator == (const ConfItem& ) const;
-        ConfItem() = default;
-        ItemType parse(std::list<std::string> &);
-        std::string* name() { return name_; }
-        ItemValue &value() { return value_; }
+
+        ConfItem(const ConfItem& confItem);
+
+        bool operator == (ConfItem) const;
+        ConfItem() {};
+        ItemType parse(std::vector<std::string> &);
+        std::vector<std::string> toStrings();
+        std::string &name() const{ return const_cast<std::string &>(name_); }
+
         ItemType &type() {return type_;}
+        int64_t & GetValueInt() const {return value_.GetInt();}
+        std::string & GetValueStr() const {return value_.GetStr();}
+        std::vector<std::string> & GetValueStrList() const {return value_.GetStrList();}
+        void SetValue(std::int64_t &i) {value_.Set(i);}
+        void SetValue(std::string &s) {value_.Set(s);}
+        void SetValue(char*s) {auto str=std::string(s);value_.Set(str);}
+        void SetValue(std::vector<std::string> & strList) {value_.Set(strList);}
 
     protected:
-        std::string stringListJoin_(std::list<std::string>&);
+        std::string stringListJoin_(std::vector<std::string>&);
     private:
-        std::string *name_;
+        std::string name_;
         ItemType type_;
         ItemValue value_;
     };

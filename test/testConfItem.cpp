@@ -3,7 +3,7 @@
 //
 
 #include <string>
-#include <list>
+#include <vector>
 #include <gtest/gtest.h>
 
 #include <ConfItem.h>
@@ -16,7 +16,7 @@ namespace LibvirtConf {
     // Using multiple
     class TestConfItem: public ::testing::Test, public ConfItem {
     public:
-        std::string joinList(std::list<std::string> &list) {
+        std::string joinList(std::vector<std::string> &list) {
           return stringListJoin_(list);
         }
     };
@@ -24,7 +24,7 @@ namespace LibvirtConf {
 
     TEST_F(TestConfItem, testJoinString){
         struct TestItem_{
-            std::list<std::string> strList;
+            std::vector<std::string> strList;
             std::string result;
         };
         std::vector<TestItem_> items {
@@ -61,7 +61,7 @@ namespace LibvirtConf {
 
     TEST_F(TestConfItem, testParse) {
         struct TestItem_ {
-            std::list<std::string> strList;
+            std::vector<std::string> strList;
             ItemType result;
             std::string name;
             int iValue;
@@ -119,20 +119,36 @@ namespace LibvirtConf {
         for (auto item : items) {
             auto ret = parse(item.strList);
             EXPECT_EQ(item.result, ret);
-            EXPECT_EQ(*name(), item.name);
+            EXPECT_EQ(name(), item.name);
             switch(ret) {
                 case ItemType::ITEM_INT:
-                    EXPECT_EQ(value().i, item.iValue);
+                    EXPECT_EQ(GetValueInt(), item.iValue);
                     break;
 
                 case ItemType::ITEM_STRING:
-                    EXPECT_EQ(*(value().s), item.sValue);
+                    EXPECT_EQ(GetValueStr(), item.sValue);
                     break;
 
                 case ItemType::ITEM_STRING_LIST:
-                    EXPECT_EQ(joinList(*(value().strList)), item.sValue);
+                    EXPECT_EQ(joinList(GetValueStrList()), item.sValue);
                     break;
             }
         }
     }
+
+    TEST_F(TestConfItem, testToStrings) {
+        struct TestItem_ {
+            std::string name;
+            ItemType type;
+            ItemValue value;
+        };
+        std::vector<TestItem_> items {
+            {
+                "test_int",
+                ItemType::ITEM_INT,
+
+            }
+        };
+    }
+
 }

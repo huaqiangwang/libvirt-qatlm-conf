@@ -15,6 +15,7 @@ namespace LibvirtConf {
     public:
         VirtSetting() {items_ = new std::vector<ConfItem>;}
         std::vector<ConfItem>* GetConf(std::string&);
+        int GenerateConfFile(std::string&);
 
     private:
         std::vector<ConfItem>* items_;
