@@ -6,6 +6,7 @@
 #include <string>
 #include <fstream>
 #include <regex>
+#include <filesystem>
 
 #include "ConfItem.h"
 #include "LibvirtConf.h"
@@ -76,5 +77,85 @@ namespace LibvirtConf {
         }
 
         targetFile.close();
+        return 0;
+    }
+
+    std::vector<std::string>*  VirtSetting::GetQATDevList() {
+        std::filesystem::path uioClassPath("/sys/class/uio");
+        if (!std::filesystem::exists(uioClassPath))
+            return devs_;
+
+        const std::regex uioRegex("/sys/class/uio/(uio\\d+)");
+        const std::regex qatNameRegex("c6xxvf");
+        std::smatch m;
+
+        for (const auto &entry : std::filesystem::directory_iterator(uioClassPath)) {
+            auto devName = std::string(entry.path());
+
+            if (!std::regex_search(devName, m,  uioRegex))
+                continue;
+
+            std::string devStr("/dev/");
+            devStr.append(m[1].str());
+            auto uioDevName = uioClassPath / devName / "name";
+            if (!std::filesystem::exists(uioDevName))
+                continue;
+
+            std::ifstream uioName(uioDevName);
+            if (!uioName.is_open())
+                continue;
+
+            std::string devNameContent;
+            std::getline(uioName, devNameContent);
+            uioName.close();
+
+            if (!std::regex_search(devNameContent, qatNameRegex))
+                continue;
+            devs_->push_back(devStr);
+        }
+
+        devs_->push_back("/dev/qat_adf_ctl");
+        devs_->push_back("/dev/usdm_drv");
+        devs_->push_back("/dev/qat_dev_processes");
+
+        return devs_;
+    }
+
+    void VirtSetting::UpdateQATDevices() {
+        // looking for "cgroup_device_acl"
+        ConfItem *qatItem = NULL;
+        bool haveQATItem = false;
+        for (auto& item : *items_){
+            if (item.name() == "cgroup_device_acl") {
+                qatItem = &item;
+                haveQATItem = true;
+            }
+        }
+
+        std::vector<std::string> fixedDevs{"/dev/null", "/dev/full", "/dev/zero",
+                                           "/dev/random", "/dev/urandom",
+                                           "/dev/ptmx", "/dev/kvm", "/dev/kqemu",
+                                           "/dev/rtc","/dev/hpet", "/dev/sev"};
+        if (!haveQATItem) {
+            qatItem = new ConfItem("cgroup_device_acl",
+                                   ItemType::ITEM_STRING_LIST,
+                                   {0, "", fixedDevs});
+        }
+
+        for (auto & dev : fixedDevs ) {
+            if (qatItem->InStrList(dev))
+                continue;
+
+            qatItem->InsertItemInStrList(dev);
+        }
+
+        for (auto & dev : *devs_) {
+            if (qatItem->InStrList(dev))
+                continue;
+
+            qatItem->InsertItemInStrList(dev);
+        }
+        if (!haveQATItem)
+            items_->push_back(*qatItem);
     }
 }

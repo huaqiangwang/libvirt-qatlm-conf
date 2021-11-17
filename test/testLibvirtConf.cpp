@@ -53,6 +53,16 @@ TEST(TestLivirtConf, testWriteConfFile) {
     std::string fileName(fileNameBuf);
     conf->GetConf(fileName);
 
+    conf->GetQATDevList();
+    conf->UpdateQATDevices();
+
     std::string fileOut("qemu-auto.conf");
     conf->GenerateConfFile(fileOut);
+}
+
+TEST(TestLivirtConf, testGetDevList) {
+    auto conf = new VirtSetting();
+
+    auto devs = conf->GetQATDevList();
+    EXPECT_TRUE(!devs->empty());
 }

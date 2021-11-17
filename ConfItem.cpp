@@ -182,4 +182,24 @@ namespace LibvirtConf {
         type_ = confItem.type_;
         value_ = confItem.value_;
     }
+
+    bool ConfItem::InStrList(std::string &item) {
+        if (type_ != ItemType::ITEM_STRING_LIST)
+            return false;
+
+        for (const auto & s : value_.GetStrList()) {
+            if (s == item)
+                return true;
+        }
+
+        return false;
+    }
+
+    bool ConfItem::InsertItemInStrList(std::string item) {
+        if (type_ != ItemType::ITEM_STRING_LIST)
+            return false;
+
+        value_.GetStrList().push_back(item);
+        return true;
+    }
 }

@@ -86,6 +86,8 @@ namespace LibvirtConf {
         int64_t & GetValueInt() const {return value_.GetInt();}
         std::string & GetValueStr() const {return value_.GetStr();}
         std::vector<std::string> & GetValueStrList() const {return value_.GetStrList();}
+        bool InStrList(std::string &item);
+        bool InsertItemInStrList(std::string item);
         void SetValue(std::int64_t &i) {value_.Set(i);}
         void SetValue(std::string &s) {value_.Set(s);}
         void SetValue(char*s) {auto str=std::string(s);value_.Set(str);}

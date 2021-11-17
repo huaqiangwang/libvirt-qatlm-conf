@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project(libvirt_qatlm_conf)
 
-set(CMAKE_CXX_STANDARD 14)
+# Using C++17 for filesystem library
+set(CMAKE_CXX_STANDARD 17)
 set(TEST_NAME, "virtconftest")
 
 add_executable(libvirt_qatlm_conf main.cpp ConfItem.cpp LibvirtConf.cpp)
