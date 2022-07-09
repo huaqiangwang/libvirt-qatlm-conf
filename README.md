@@ -8,27 +8,20 @@ environment.
 
 *Looking usage of this tool*
 
->
-> libvirt-qat-conf -h
->
+```shell
+libvirt-qatlm-conf -h
+```
 
-*Validate current configuration*
+*Update qemu.conf for purpose of support LM qat migration*
 
->
-> libvirt-qat-conf -v
->
-
-or
-
->
-> libvirt-qat-conf --validate
-> 
-
-*Configure libvirt*
-
->
-> libvirt-qat-conf
-> 
+```shell
+# backup qemu.conf
+sudo cp /etc/libvirt/qemu.conf /etc/libvirt/qemu.origin.conf
+# Apply new settings to qemu.conf
+sudo /tools/libvirt_qatlm_conf /etc/libvirt/qemu.conf /tmp/qemu.conf
+sudo cp /tmp/qemu.conf /etc/libvirt/qemu.conf
+sudo systemctl restart libvirtd
+```
 
 ## Compile and Run the test
 
@@ -37,6 +30,5 @@ cd <root>
 mkdir build && cd build
 cmake ..
 make -j10
-ctest 
 #(or make test)
 ```

@@ -7,6 +7,7 @@
 #include <fstream>
 #include <regex>
 #include <filesystem>
+#include <iostream>
 
 #include "ConfItem.h"
 #include "LibvirtConf.h"
@@ -82,8 +83,14 @@ namespace LibvirtConf {
 
     std::vector<std::string>*  VirtSetting::GetQATDevList() {
         std::filesystem::path uioClassPath("/sys/class/uio");
-        if (!std::filesystem::exists(uioClassPath))
+        if (!std::filesystem::exists(uioClassPath)) {
+            std::cout << std::endl;
+            std::cout << "\t!! No /sys/class/uio found, have you installed QAT driver?"<< std::endl;
+            std::cout << "\t Stop." << std::endl;
+            std::cout << std::endl;
+            exit(1);
             return devs_;
+        }
 
         const std::regex uioRegex("/sys/class/uio/(uio\\d+)");
         const std::regex qatNameRegex("c6xxvf");
